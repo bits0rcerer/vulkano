@@ -97,6 +97,35 @@ pub struct CommandBuffer {
     submit_state: SubmitState,
 }
 
+impl CommandBuffer {
+    pub unsafe fn from_raw(raw: RawCommandBuffer) -> CommandBuffer {
+        Self {
+            submit_state: match raw.usage() {
+                CommandBufferUsage::OneTimeSubmit => SubmitState::OneTime {
+                    already_submitted: Default::default(),
+                },
+                CommandBufferUsage::MultipleSubmit => SubmitState::ExclusiveUse {
+                    in_use: Default::default(),
+                },
+                CommandBufferUsage::SimultaneousUse => SubmitState::Concurrent,
+            },
+            inner: raw,
+            _keep_alive_objects: Default::default(),
+            resources_usage: CommandBufferResourcesUsage {
+                buffers: Default::default(),
+                images: Default::default(),
+                buffer_indices: Default::default(),
+                image_indices: Default::default(),
+            },
+            secondary_resources_usage: SecondaryCommandBufferResourcesUsage {
+                buffers: Default::default(),
+                images: Default::default(),
+            },
+            state: Mutex::new(CommandBufferState::default()),
+        }
+    }
+}
+
 unsafe impl VulkanObject for CommandBuffer {
     type Handle = ash::vk::CommandBuffer;
 
